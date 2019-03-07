@@ -1,0 +1,30 @@
+html
+    style(type="text/css").
+        div {
+            width:600px;
+            height:300px;
+            border:2px solid black;
+        }
+        ul{
+            list-style-type:none;
+        }
+    title User List
+    script.
+        users="#{users}";
+
+
+body
+    h1 User List
+        ul
+            each val in users
+                div
+                    li= val.name
+                    li= val.email
+                    li= val.uid
+                    li= val.age
+                    li
+                        a(class='button', href=`/edit/${val.uid}`) Edit
+                    li
+                        a(class='button', href=`/delete/${val.uid}`) Delete
+            else 
+                li There are no values

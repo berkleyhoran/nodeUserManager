@@ -1,0 +1,26 @@
+html
+    style(type="text/css").
+        div {
+            width:600px;
+            height:300px;
+            border:2px solid black;
+        }
+        ul{
+            list-style-type:none;
+        }
+    title User List
+    script.
+        user='#{user}';
+
+
+body
+    form(action='/rewrite', method='POST')
+            p
+                li= user.name
+                input(name='name', value='', type='text')
+                li= user.email
+                input(name='email', value='', type='text')
+                li= user.age
+                input(name='age', value='', type='text')
+                
+            input(value='Submit', type='submit')

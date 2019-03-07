@@ -1,0 +1,16 @@
+html
+    head
+        title(class='myclass', id='myID')= Login
+    body
+        h1 Login
+        form(action='/create', method='POST')
+            p
+                |          Name: 
+                input(name='name', value='', type='text')
+                |          Email: 
+                input(name='email', value='', type='text')
+                |          Age: 
+                input(name='age', value='', type='text')
+                
+            input(value='Submit', type='submit')
+        
