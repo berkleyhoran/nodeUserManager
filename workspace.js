@@ -1,6 +1,10 @@
 const express = require('express');
 const path = require('path');
 const moment = require('moment');
+const mongo = require('mongodb').MongoClient;
+var db;
+
+const url = 'mongodb://localhost:27017'
 var router = express.Router();
 var fs = require('fs');
 var util = require('util');
@@ -18,7 +22,18 @@ app.set('view engine', 'pug')
 
 var users = [];
 var user = {};
+var sort = "ascending";
 var index;
+
+mongo.connect(url, (err, client) => {
+    if (err) {
+      console.error(err)
+      return;
+    }
+    const db = client.db('userList');
+    const collection = db.collection('users');
+
+    collection.remove({})
 
 app.get('/', (req, res) => {
     res.send('Erorr 404 go to /login')
@@ -40,9 +55,39 @@ app.get('/users', (req, res) => {
 
         fixArray();
 
-        console.log(users)
+        updateDB();
 
-        res.render('users', { users: users })
+        res.render('users', { users: users , sort: sort})
+
+});
+
+app.get('/users/:sort/:searchterm', (req, res) => {
+
+    updateArray();
+
+    fixArray();
+
+    searchUsers(req.params.searchterm)
+
+    for (let u = 0; u < users.length; u++) {
+        sortBy(req.params.sort, users[u], users[u + 1])
+    }
+
+    
+
+    res.render('users', {users: users, sort: sort, input: req.params.searchterm})
+
+});
+
+app.get('/users/:sort', (req, res) => {
+
+    fixArray();
+
+    for (let u = 0; u < users.length; u++) {
+        sortBy(req.params.sort, users[u], users[u + 1])
+    }
+
+    res.render('users', {users: users, sort: sort, input: ''})
 
 });
 
@@ -50,14 +95,9 @@ app.get('/edit/:uid', (req, res) => {
 
     fixArray();
 
-    console.log(users)
-
     index;
     
     for (let i = 0; i < users.length; i++) {
-        console.log('searching')
-        console.log(req.params.uid)
-        console.log(users[i].uid)
         if(Number(req.params.uid) === Number(users[i].uid)){
             index = i;
             break;
@@ -70,9 +110,6 @@ app.get('/edit/:uid', (req, res) => {
 
 
 app.post('/rewrite', (req, res) => {
-
-    console.log(users[index].age);
-    console.log(req.body.age)
 
     users[index].name = req.body.name;
     users[index].age = req.body.age;
@@ -88,14 +125,9 @@ app.get('/delete/:uid', (req, res) => {
 
     fixArray();
 
-    console.log(users)
-
     index;
     
     for (let i = 0; i < users.length; i++) {
-        console.log('searching')
-        console.log(req.params.uid)
-        console.log(users[i].uid)
         if(Number(req.params.uid) === Number(users[i].uid)){
             index = i;
             deleteIndex(index)
@@ -124,8 +156,8 @@ function createdUser(u,a,n,e){
     } 
     
     users.push(user)
-    console.log(user)
-    console.log(users)
+
+    updateDB();
     
     fs.appendFile('users.txt', JSON.stringify(user).toString() + "\n" , 'utf-8', error => {
         if (error) throw err;
@@ -134,16 +166,12 @@ function createdUser(u,a,n,e){
 
 function fixArray(){
     for (let e = 0; e < users.length; e++) {
-        console.log(e + JSON.stringify(users[e]))
         if(users[e] == ''){
-            console.log('empty line')
             users.splice(e, 1);
         }
         if(users[e] === null || users[e] === undefined){
-            console.log('he gone')
         }
         else if((typeof users[e]) !== 'object' && users[e] !== null){
-            console.log('it isnt an object')
             users[e] = JSON.parse(users[e])
         } 
     }
@@ -174,7 +202,60 @@ function reWriteArray(){
 
 }
 
+function searchUsers(searchterm){
+    let check = 0;
+    for (let e = 0; e < users.length; e++) {
+        console.log(JSON.stringify(users[e]).toLowerCase())
+        if(JSON.stringify(users[e]).toLowerCase().includes(searchterm.toLowerCase())){
+            console.log('found match');
+            check += 1;
+        }
+        else{
+            console.log('deleted not match')
+            users.splice(e, 1)
+        }
+    }
+    if(check == 0){
+        users = [];
+    }
+}
+
+function sortBy(e, a, b){
+    if(e == "ascending"){
+        if(b == 0){
+            console.log('break');
+            
+        }
+        else{
+            users.sort((a, b) => (a.name > b.name) ? 1 : -1);
+        }
+        
+    }
+    if(e == "descending"){
+        if(b == 0){
+            console.log('break');
+        }
+        else{
+            users.sort((a, b) => (a.name > b.name) ? 1 : -1).reverse();
+        }
+    }
+}
+
+function updateDB(){
+    updateArray()
+    fixArray()
+    collection.insertMany(users, (err, result) => {
+
+    })
+}
+// function inputsearch(searchterm){
+//     window.location.href = `/users/${searchterm}`;
+//     console.log('it wiorked')
+// }   
+
 
 app.listen(4000 , () => {
     console.log("Listening on port 4000")
 });
+
+})

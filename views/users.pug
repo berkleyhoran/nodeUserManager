@@ -1,20 +1,29 @@
 html
-    style(type="text/css").
-        div {
-            width:600px;
-            height:300px;
-            border:2px solid black;
-        }
-        ul{
-            list-style-type:none;
-        }
-    title User List
-    script.
-        users="#{users}";
+    head
+        style(type="text/css").
+            div {
+                width:600px;
+                height:300px;
+                border:2px solid black;
+            }
+            ul{
+                list-style-type:none;
+            }
+        title User List
+        script.
+            users="#{users}"
+            sort="#{sort}"
+            input="#{input}"
+        script(scr='../workspace.js')
 
 
 body
-    h1 User List
+    h1= "User List"
+        input(type='text', name='search', onchange=`location.href = '/users/' + '${sort}' + '/' + this.value`)
+        select(onchange=`location.href = '/users/' + this.value + '/' + input`)
+            option(value=null) -
+            option(value='ascending') ascending (A-Z)
+            option(value='decending') decending (A-Z)
         ul
             each val in users
                 div
