@@ -22,6 +22,7 @@ app.set('view engine', 'pug')
 
 var users = [];
 var user = {};
+var search = [];
 var sort = "ascending";
 var index;
 
@@ -33,29 +34,28 @@ mongo.connect(url, (err, client) => {
     const db = client.db('userList');
     const collection = db.collection('users');
 
-    collection.remove({})
-
 app.get('/', (req, res) => {
     res.send('Erorr 404 go to /login')
 });
 
 app.get('/login', (req, res) => {
     res.render('index');
-    updateArray();
+    getCollection();
 })
 
 app.post('/create', (req, res) => {
     createdUser(Math.abs(Math.floor(Math.random() * (0 - 1000 + 1)) + 0), req.body.age, req.body.name, req.body.email)
     res.render('create');
+    reWriteArray();
 })
 
 app.get('/users', (req, res) => {
 
-        updateArray();
+        getCollection();
+
+        reWriteArray();
 
         fixArray();
-
-        updateDB();
 
         res.render('users', { users: users , sort: sort})
 
@@ -63,29 +63,21 @@ app.get('/users', (req, res) => {
 
 app.get('/users/:sort/:searchterm', (req, res) => {
 
-    updateArray();
-
-    fixArray();
+    getCollection();
 
     searchUsers(req.params.searchterm)
 
-    for (let u = 0; u < users.length; u++) {
-        sortBy(req.params.sort, users[u], users[u + 1])
-    }
+    sortBySearched(req.params.sort)
 
-    
-
-    res.render('users', {users: users, sort: sort, input: req.params.searchterm})
+    res.render('users', {users: search, sort: sort, input: req.params.searchterm})
 
 });
 
 app.get('/users/:sort', (req, res) => {
 
-    fixArray();
+    getCollection();
 
-    for (let u = 0; u < users.length; u++) {
-        sortBy(req.params.sort, users[u], users[u + 1])
-    }
+    sortBy(req.params.sort)
 
     res.render('users', {users: users, sort: sort, input: ''})
 
@@ -115,6 +107,11 @@ app.post('/rewrite', (req, res) => {
     users[index].age = req.body.age;
     users[index].email = req.body.email;
 
+    collection.updateOne({uid:users[index].uid},{ $set : users[index] }, function(err, res) {
+        if (err) throw err;
+        console.log("1 document updated");
+      });
+
     reWriteArray();
 
     res.render('rewrite')
@@ -126,14 +123,11 @@ app.get('/delete/:uid', (req, res) => {
     fixArray();
 
     index;
-    
-    for (let i = 0; i < users.length; i++) {
-        if(Number(req.params.uid) === Number(users[i].uid)){
-            index = i;
-            deleteIndex(index)
-            break;
-        }
-    }
+
+    collection.deleteOne({uid: Number(req.params.uid)}, function(err, obj) {
+        if (err) throw err;
+        console.log(req.params.uid + ' deleted');
+      });
 
     res.render('delete')
   
@@ -180,11 +174,8 @@ function fixArray(){
 function deleteIndex(index){
     updateArray();
     fixArray();
-
     users.splice(index, 1)
-
     reWriteArray();
-
     console.log('user deleted')
 }
 
@@ -203,40 +194,75 @@ function reWriteArray(){
 }
 
 function searchUsers(searchterm){
-    let check = 0;
+    search = [];
     for (let e = 0; e < users.length; e++) {
-        console.log(JSON.stringify(users[e]).toLowerCase())
-        if(JSON.stringify(users[e]).toLowerCase().includes(searchterm.toLowerCase())){
-            console.log('found match');
-            check += 1;
+        console.log(users[e].name)
+        if(users[e].name.toLowerCase().includes(searchterm.toLowerCase()) && users[e].name !== ''){
+            search.push(users[e])
+            console.log('saved')
         }
-        else{
-            console.log('deleted not match')
-            users.splice(e, 1)
+        else{ 
+            search.splice(e, 1)
+            console.log('spliced ')
         }
     }
-    if(check == 0){
-        users = [];
-    }
+    console.log(search)
 }
 
-function sortBy(e, a, b){
+function sortBy(e){
     if(e == "ascending"){
-        if(b == 0){
-            console.log('break');
-            
+        if(users.length == 0){
+            console.log('break');  
         }
         else{
-            users.sort((a, b) => (a.name > b.name) ? 1 : -1);
+            users.sort(function(a, b) {
+                var textA = a.name.toUpperCase();
+                var textB = b.name.toUpperCase();
+                return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+            });
         }
         
     }
-    if(e == "descending"){
-        if(b == 0){
+    else{
+        if(users.length == 0){
             console.log('break');
         }
         else{
-            users.sort((a, b) => (a.name > b.name) ? 1 : -1).reverse();
+            users.sort(function(a, b) {
+                var textA = a.name.toUpperCase();
+                var textB = b.name.toUpperCase();
+                return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+            })
+            users = users.reverse()
+        }
+    }
+}
+
+function sortBySearched(e){
+    if(e == "ascending"){
+        if(search.length == 0){
+            console.log('break');  
+        }
+        else{
+            search.sort(function(a, b) {
+                var textA = a.name.toUpperCase();
+                var textB = b.name.toUpperCase();
+                return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+            });
+        }
+        
+    }
+    else{
+        if(search.length == 0){
+            console.log('break');
+        }
+        else{
+            search.sort(function(a, b) {
+                var textA = a.name.toUpperCase();
+                var textB = b.name.toUpperCase();
+                return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+            })
+            search = search.reverse()
         }
     }
 }
@@ -244,9 +270,15 @@ function sortBy(e, a, b){
 function updateDB(){
     updateArray()
     fixArray()
-    collection.insertMany(users, (err, result) => {
+    collection.insertOne(user)   
+}
 
-    })
+function getCollection(){
+    collection.find({}).toArray(function(err, result) {
+        if (err) throw err;
+        users = result;
+        })
+    
 }
 // function inputsearch(searchterm){
 //     window.location.href = `/users/${searchterm}`;
