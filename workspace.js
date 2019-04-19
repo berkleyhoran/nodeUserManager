@@ -129,6 +129,7 @@ app.get('/delete/:uid', (req, res) => {
         console.log(req.params.uid + ' deleted');
       });
 
+
     res.render('delete')
   
 })
